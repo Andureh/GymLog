@@ -1,21 +1,21 @@
-# Histórico de versões
+# Changelog
 
 ## 1.4
-- 11 exercícios novos no catálogo (Supino plano Smith, Supino iso-lateral, Remada com apoio no peito, Remada T com apoio no peito, High row iso-lateral, Elevações laterais sentado, Leg press horizontal, Gémeos em pé Smith, Crunch declinado com peso, Ciclismo, Caminhada).
-- Exercícios personalizados com o mesmo nome são convertidos automaticamente nos do catálogo (o histórico mantém-se).
-- O seletor de ficheiros para importar aceita qualquer ficheiro (o CSV do Hevy aparecia a cinzento em alguns gestores de ficheiros).
+- 11 new exercises in the catalog (Bench Press (Smith), Iso-Lateral Chest Press, Chest Supported Incline Row, Chest Supported T Bar Row, Iso-Lateral High Row, Seated Lateral Raise, Leg Press Horizontal, Standing Calf Raise (Smith), Decline Crunch (Weighted), Cycling, Walking).
+- Custom exercises with the same name are automatically converted into the catalog ones, keeping their history.
+- The file picker for imports accepts any file (the Hevy CSV appeared greyed out in some file managers).
 
 ## 1.3
-- Importação do histórico do Hevy (ficheiro CSV).
+- Import workout history from Hevy (CSV file).
 
 ## 1.2
-- Treinador IA opcional com Google Gemini (plano gratuito).
-- Sugestões automáticas de progressão durante o treino.
-- Fotos dos exercícios (descarregadas a pedido) e atalho para vídeos da técnica no YouTube.
+- Optional AI coach powered by Google Gemini (free tier).
+- Automatic progression suggestions during workouts.
+- Exercise photos (downloaded on demand) and a shortcut to technique videos on YouTube.
 
 ## 1.1
-- Seis línguas: português, inglês, espanhol, francês, alemão e italiano.
-- Exercícios, músculos e equipamento traduzidos; datas e números no formato de cada país.
+- Six languages: Portuguese, English, Spanish, French, German and Italian.
+- Translated exercises, muscle groups and equipment; dates and numbers in each country's format.
 
 ## 1.0
-- Primeira versão: treinos, rotinas, temporizador de descanso, recordes pessoais com alertas, gráficos por exercício, estatísticas, peso corporal e cópias de segurança.
+- First version: workouts, routines, rest timer, personal records with alerts, per-exercise charts, statistics, body weight and backups.
