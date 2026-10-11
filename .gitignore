@@ -1,0 +1,20 @@
+# Gradle / Android Studio
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Binários e chaves (os APK são publicados nas Releases do GitHub)
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Sistema
+.DS_Store
+Thumbs.db
