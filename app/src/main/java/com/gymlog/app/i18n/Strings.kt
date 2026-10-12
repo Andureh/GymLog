@@ -306,6 +306,12 @@ abstract class Strings {
     abstract val routineGroupingNote: String
     abstract val noRoutineData: String
 
+    abstract val autoDetected: String
+    abstract val assignRoutine: String
+    abstract val routineAuto: String
+    abstract val exercisesWord: String
+    abstract fun routineOf(name: String): String
+
     // ---------- Derivados ----------
     fun exerciseType(t: ExerciseType) = when (t) {
         ExerciseType.WEIGHT_REPS -> typeWeightReps
@@ -327,6 +333,10 @@ abstract class Strings {
         PrType.REPS -> mostRepsSet
         PrType.DURATION -> longestSet
     }
+
+    /** Ex.: "+1 / −2 exercícios" (diferença de exercícios em relação à sessão anterior). */
+    fun exercisesDiff(added: Int, removed: Int): String =
+        listOfNotNull(if (added > 0) "+$added" else null, if (removed > 0) "−$removed" else null).joinToString(" / ") + " " + exercisesWord
 
     fun muscle(key: String) = Catalog.muscle(key, col)
     fun equipment(key: String) = Catalog.equipment(key, col)

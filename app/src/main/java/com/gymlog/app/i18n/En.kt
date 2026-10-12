@@ -279,6 +279,11 @@ object En : Strings() {
     override val best = "Best"
     override val change = "Change"
     override val viewProgress = "View progress"
-    override val routineGroupingNote = "Workouts are grouped by name: workouts with the same name count as the same routine."
+    override val routineGroupingNote = "Workouts started from a routine always stay in it, even if you change the title or the exercises. Older and imported workouts are grouped by their exercises; you can fix this in the workout details (⋮ → Routine of this workout)."
     override val noRoutineData = "No finished workouts yet."
+    override val autoDetected = "Detected automatically from the workouts' exercises."
+    override val assignRoutine = "Routine of this workout"
+    override val routineAuto = "Automatic (by exercises)"
+    override val exercisesWord = "exercises"
+    override fun routineOf(name: String) = "Routine: $name"
 }

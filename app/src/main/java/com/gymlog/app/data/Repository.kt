@@ -81,7 +81,7 @@ class Repository(private val db: AppDatabase, private val settings: Settings) {
 
     suspend fun startFromRoutine(routineId: Long): Long = db.withTransaction {
         val r = rDao.fullOnce(routineId)?.sorted() ?: return@withTransaction startEmptyWorkout()
-        val wid = wDao.insertWorkout(Workout(name = r.routine.name, startTime = System.currentTimeMillis()))
+        val wid = wDao.insertWorkout(Workout(name = r.routine.name, startTime = System.currentTimeMillis(), routineId = routineId))
         r.exercises.forEachIndexed { i, item ->
             val re = item.re
             val weId = wDao.insertWe(
@@ -104,7 +104,9 @@ class Repository(private val db: AppDatabase, private val settings: Settings) {
 
     suspend fun repeatWorkout(workoutId: Long): Long = db.withTransaction {
         val src = wDao.fullOnce(workoutId)?.sorted() ?: return@withTransaction startEmptyWorkout()
-        val wid = wDao.insertWorkout(Workout(name = src.workout.name, startTime = System.currentTimeMillis()))
+        val wid = wDao.insertWorkout(
+            Workout(name = src.workout.name, startTime = System.currentTimeMillis(), routineId = src.workout.routineId)
+        )
         src.exercises.forEachIndexed { i, e ->
             val weId = wDao.insertWe(
                 WorkoutExercise(workoutId = wid, exerciseId = e.exercise.id, position = i, restSeconds = e.we.restSeconds)
@@ -209,7 +211,18 @@ class Repository(private val db: AppDatabase, private val settings: Settings) {
             rid
         }
 
-    suspend fun saveWorkoutAsRoutine(workoutId: Long): Long? {
+    /** Liga (ou desliga, com null) um treino a uma rotina. */
+    suspend fun setWorkoutRoutine(workoutId: Long, routineId: Long?) = wDao.setRoutine(listOf(workoutId), routineId)
+
+    /**
+     * Cria uma rotina a partir de um treino (exercícios, séries e pesos) e liga-lhe os treinos indicados
+     * (por defeito, só esse treino).
+     */
+    suspend fun saveWorkoutAsRoutine(
+        workoutId: Long,
+        name: String? = null,
+        linkWorkoutIds: List<Long> = listOf(workoutId),
+    ): Long? {
         val w = wDao.fullOnce(workoutId)?.sorted() ?: return null
         val items = w.exercises.map { e ->
             val working = e.sets.filter { it.type != SetType.WARMUP }.ifEmpty { e.sets }
@@ -222,7 +235,9 @@ class Repository(private val db: AppDatabase, private val settings: Settings) {
                 restSeconds = e.we.restSeconds,
             )
         }
-        return saveRoutine(0, w.workout.name, "", items)
+        val rid = saveRoutine(0, name ?: w.workout.name, "", items)
+        wDao.setRoutine(linkWorkoutIds, rid)
+        return rid
     }
 
     // ---------- Peso corporal ----------

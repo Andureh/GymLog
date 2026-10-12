@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6
+- Progress by routine now groups workouts by **routine**, not by title:
+  - Workouts started from a routine are linked to it and stay in its charts even if you rename them, add or remove exercises mid-workout, or edit the routine later.
+  - Older and imported workouts (e.g. from Hevy) are matched by their **exercises**, comparing with the routine and its recent sessions, so the same routine with different titles ends up in the same chart.
+- Fix the grouping by hand in the workout details (**⋮ → Routine of this workout**); the details also show which routine a workout belongs to.
+- Automatically detected routines can be saved as real routines with one tap.
+- Each session in the list shows how many exercises were added or removed compared with the previous one, to explain jumps in volume.
+- Database version 3 (automatic migration, no data loss).
+
 ## 1.5
 - New **Progress by routine** screen: total volume and total sets of each routine over time, with average, best and change for the selected period, plus the list of sessions.
 - Open it from a routine's menu (**View progress**) or from **Profile**.

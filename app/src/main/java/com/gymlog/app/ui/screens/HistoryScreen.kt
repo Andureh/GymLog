@@ -25,6 +25,13 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn as RoutineList
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -182,6 +189,8 @@ fun WorkoutDetailScreen(nav: NavController, workoutId: Long, isNew: Boolean) {
     val snackbar = remember { SnackbarHostState() }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var routineDialog by remember { mutableStateOf(false) }
+    val routines by remember { repo.routines() }.collectAsStateWithLifecycle(emptyList())
     val s = LocalStrings.current
 
     val state = loaded
@@ -210,6 +219,10 @@ fun WorkoutDetailScreen(nav: NavController, workoutId: Long, isNew: Boolean) {
                             if (settings.aiEnabled) DropdownMenuItem(
                                 text = { Text(s.aiAnalyzeWorkout) }, leadingIcon = { Icon(Icons.Default.Psychology, null) },
                                 onClick = { menu = false; nav.navigate("coach?workout=$workoutId") },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(s.assignRoutine) }, leadingIcon = { Icon(Icons.Default.ShowChart, null) },
+                                onClick = { menu = false; routineDialog = true },
                             )
                             DropdownMenuItem(
                                 text = { Text(s.repeatWorkout) }, leadingIcon = { Icon(Icons.Default.Replay, null) },
@@ -255,6 +268,14 @@ fun WorkoutDetailScreen(nav: NavController, workoutId: Long, isNew: Boolean) {
             item {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text(fmtDateTime(w.workout.startTime), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    routines.find { it.routine.id == w.workout.routineId }?.let { r ->
+                        Text(
+                            s.routineOf(r.routine.name),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { nav.navigate("routineProgress?key=" + android.net.Uri.encode("r:${r.routine.id}")) },
+                        )
+                    }
                     Spacer(Modifier.height(12.dp))
                     Row {
                         StatItem(s.duration, fmtDuration(w.durationMs()), Modifier.weight(1f))
@@ -314,6 +335,31 @@ fun WorkoutDetailScreen(nav: NavController, workoutId: Long, isNew: Boolean) {
         }
     }
 
+    if (routineDialog) {
+        val options = listOf<Pair<Long?, String>>(null to s.routineAuto) + routines.map { it.routine.id to it.routine.name }
+        AlertDialog(
+            onDismissRequest = { routineDialog = false },
+            title = { Text(s.assignRoutine) },
+            text = {
+                RoutineList(Modifier.heightIn(max = 400.dp)) {
+                    items(options) { (id, label) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
+                                routineDialog = false
+                                scope.launch { repo.setWorkoutRoutine(workoutId, id) }
+                            }.padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = id == w.workout.routineId, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { routineDialog = false }) { Text(s.close) } },
+        )
+    }
     if (confirmDelete) {
         ConfirmDialog(
             title = s.deleteWorkoutTitle,

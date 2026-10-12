@@ -11,7 +11,7 @@ import com.gymlog.app.i18n.Catalog
         Exercise::class, Workout::class, WorkoutExercise::class, WorkoutSet::class,
         Routine::class, RoutineExercise::class, BodyWeight::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,6 +35,14 @@ abstract class AppDatabase : RoomDatabase() {
                 Catalog.legacyEquipmentKeys.forEach { (pt, key) ->
                     db.execSQL("UPDATE exercises SET equipment = ? WHERE equipment = ?", arrayOf(key, pt))
                 }
+            }
+        }
+
+        /** v3: ligação de cada treino à rotina de onde foi iniciado. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workouts ADD COLUMN routineId INTEGER REFERENCES routines(id) ON UPDATE NO ACTION ON DELETE SET NULL")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_workouts_routineId ON workouts (routineId)")
             }
         }
     }

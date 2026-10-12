@@ -279,6 +279,11 @@ object It : Strings() {
     override val best = "Migliore"
     override val change = "Variazione"
     override val viewProgress = "Vedi progressi"
-    override val routineGroupingNote = "Gli allenamenti sono raggruppati per nome: allenamenti con lo stesso nome contano come la stessa scheda."
+    override val routineGroupingNote = "Gli allenamenti avviati da una scheda restano sempre in quella scheda, anche se cambi titolo o esercizi. Gli allenamenti vecchi e importati sono raggruppati in base agli esercizi; puoi correggere nel dettaglio dell'allenamento (⋮ → Scheda di questo allenamento)."
     override val noRoutineData = "Ancora nessun allenamento completato."
+    override val autoDetected = "Rilevata automaticamente dagli esercizi degli allenamenti."
+    override val assignRoutine = "Scheda di questo allenamento"
+    override val routineAuto = "Automatico (per esercizi)"
+    override val exercisesWord = "esercizi"
+    override fun routineOf(name: String) = "Scheda: $name"
 }

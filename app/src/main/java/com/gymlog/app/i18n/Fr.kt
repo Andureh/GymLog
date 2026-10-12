@@ -279,6 +279,11 @@ object Fr : Strings() {
     override val best = "Meilleur"
     override val change = "Évolution"
     override val viewProgress = "Voir les progrès"
-    override val routineGroupingNote = "Les séances sont regroupées par nom : les séances portant le même nom comptent comme le même programme."
+    override val routineGroupingNote = "Les séances lancées depuis un programme y restent toujours, même si tu changes le titre ou les exercices. Les séances anciennes et importées sont regroupées par exercices ; tu peux corriger dans le détail de la séance (⋮ → Programme de cette séance)."
     override val noRoutineData = "Aucune séance terminée pour l'instant."
+    override val autoDetected = "Détecté automatiquement d'après les exercices des séances."
+    override val assignRoutine = "Programme de cette séance"
+    override val routineAuto = "Automatique (par exercices)"
+    override val exercisesWord = "exercices"
+    override fun routineOf(name: String) = "Programme : $name"
 }

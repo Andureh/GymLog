@@ -130,10 +130,10 @@ fun AppRoot() {
             }
             composable("bodyweight") { BodyWeightScreen(nav) }
             composable(
-                "routineProgress?name={name}",
-                listOf(navArgument("name") { type = NavType.StringType; defaultValue = "" }),
+                "routineProgress?key={key}",
+                listOf(navArgument("key") { type = NavType.StringType; defaultValue = "" }),
             ) {
-                RoutineProgressScreen(nav, it.arguments?.getString("name").orEmpty())
+                RoutineProgressScreen(nav, it.arguments?.getString("key").orEmpty())
             }
             composable(
                 "coach?workout={workout}",

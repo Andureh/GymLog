@@ -24,6 +24,7 @@ object Backup {
         root.put("workouts", arr(d.workouts()) {
             JSONObject().put("id", it.id).put("name", it.name).put("startTime", it.startTime)
                 .put("endTime", it.endTime ?: JSONObject.NULL).put("notes", it.notes)
+                .put("routineId", it.routineId ?: JSONObject.NULL)
         })
         root.put("workoutExercises", arr(d.workoutExercises()) {
             JSONObject().put("id", it.id).put("workoutId", it.workoutId).put("exerciseId", it.exerciseId)
@@ -76,6 +77,7 @@ object Backup {
             Workout(
                 id = it.getLong("id"), name = it.getString("name"), startTime = it.getLong("startTime"),
                 endTime = if (it.isNull("endTime")) null else it.getLong("endTime"), notes = it.optString("notes"),
+                routineId = if (it.isNull("routineId")) null else it.getLong("routineId"),
             )
         }
         val wes = objs(root, "workoutExercises").map {
@@ -109,12 +111,14 @@ object Backup {
         db.withTransaction {
             d.clearSets(); d.clearWorkoutExercises(); d.clearWorkouts()
             d.clearRoutineExercises(); d.clearRoutines(); d.clearBodyWeights(); d.clearExercises()
+            // As rotinas entram antes dos treinos (os treinos podem apontar para uma rotina)
+            val routineIds = routines.map { it.id }.toSet()
             d.insertExercises(exercises)
-            d.insertWorkouts(workouts)
-            d.insertWorkoutExercises(wes)
-            d.insertSets(sets)
             d.insertRoutines(routines)
             d.insertRoutineExercises(res)
+            d.insertWorkouts(workouts.map { if (it.routineId != null && it.routineId !in routineIds) it.copy(routineId = null) else it })
+            d.insertWorkoutExercises(wes)
+            d.insertSets(sets)
             d.insertBodyWeights(bws)
         }
     }

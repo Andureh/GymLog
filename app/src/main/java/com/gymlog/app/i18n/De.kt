@@ -279,6 +279,11 @@ object De : Strings() {
     override val best = "Bestwert"
     override val change = "Veränderung"
     override val viewProgress = "Fortschritt ansehen"
-    override val routineGroupingNote = "Trainings werden nach Namen gruppiert: Trainings mit gleichem Namen zählen als derselbe Plan."
+    override val routineGroupingNote = "Trainings, die aus einem Plan gestartet wurden, bleiben immer in diesem Plan, auch wenn du Titel oder Übungen änderst. Ältere und importierte Trainings werden nach ihren Übungen gruppiert; du kannst das in den Trainingsdetails korrigieren (⋮ → Plan dieses Trainings)."
     override val noRoutineData = "Noch keine abgeschlossenen Trainings."
+    override val autoDetected = "Automatisch anhand der Übungen erkannt."
+    override val assignRoutine = "Plan dieses Trainings"
+    override val routineAuto = "Automatisch (nach Übungen)"
+    override val exercisesWord = "Übungen"
+    override fun routineOf(name: String) = "Plan: $name"
 }

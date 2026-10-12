@@ -11,13 +11,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,19 +34,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.gymlog.app.app
 import com.gymlog.app.domain.RoutineSession
+import com.gymlog.app.domain.RoutineTemplate
 import com.gymlog.app.domain.groupByRoutine
-import com.gymlog.app.domain.routineKey
 import com.gymlog.app.i18n.LocalStrings
 import com.gymlog.app.ui.components.Card
 import com.gymlog.app.ui.components.ChartPoint
@@ -56,6 +63,7 @@ import com.gymlog.app.util.fmtNum
 import com.gymlog.app.util.fmtVolume
 import com.gymlog.app.util.toDisplayWeight
 import com.gymlog.app.util.unitLabel
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /** Evolução entre a primeira e a última sessão do período, em %. */
@@ -65,15 +73,26 @@ private fun changeText(values: List<Double>): String {
     return (if (pct > 0) "+" else "") + "$pct%"
 }
 
+/**
+ * Progresso de cada rotina ao longo do tempo (volume total e séries por sessão).
+ * [initialKey]: "r:<id>" para abrir numa rotina guardada; vazio = a rotina feita mais recentemente.
+ */
 @Composable
-fun RoutineProgressScreen(nav: NavController, initialName: String) {
+fun RoutineProgressScreen(nav: NavController, initialKey: String) {
     val app = LocalContext.current.app
     val s = LocalStrings.current
+    val scope = rememberCoroutineScope()
     val settings by app.settings.flow.collectAsStateWithLifecycle()
     val lbs = settings.useLbs
     val workouts by remember { app.repo.finishedWorkouts() }.collectAsStateWithLifecycle(null)
-    val groups = remember(workouts) { groupByRoutine(workouts.orEmpty()) }
-    var selectedKey by rememberSaveable { mutableStateOf(routineKey(initialName)) }
+    val routines by remember { app.repo.routines() }.collectAsStateWithLifecycle(emptyList())
+    val groups = remember(workouts, routines) {
+        groupByRoutine(
+            workouts.orEmpty(),
+            routines.map { r -> RoutineTemplate(r.routine.id, r.routine.name, r.exercises.map { it.exercise.id }.toSet()) },
+        )
+    }
+    var selectedKey by rememberSaveable { mutableStateOf(initialKey) }
     var range by rememberSaveable { mutableStateOf(Range.ALL) }
 
     val group = groups.find { it.key == selectedKey } ?: groups.firstOrNull()
@@ -108,10 +127,41 @@ fun RoutineProgressScreen(nav: NavController, initialName: String) {
                             selected = g.key == group?.key,
                             onClick = { selectedKey = g.key },
                             label = { Text("${g.name} (${g.sessions.size})") },
+                            leadingIcon = if (g.isAuto) {
+                                { Icon(Icons.Default.AutoAwesome, null, Modifier.size(16.dp)) }
+                            } else null,
                         )
                     }
                 }
             }
+
+            // Grupo detetado automaticamente: explicar e permitir guardá-lo como rotina
+            if (group != null && group.isAuto) {
+                item {
+                    Card {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(s.autoDetected, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            FilledTonalButton(onClick = {
+                                val last = group.sessions.last()
+                                scope.launch {
+                                    val rid = app.repo.saveWorkoutAsRoutine(last.workoutId, group.name, group.sessions.map { it.workoutId })
+                                    if (rid != null) selectedKey = "r:$rid"
+                                }
+                            }) {
+                                Icon(Icons.Default.BookmarkAdd, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(s.saveAsRoutine)
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { RangeSelector(range) { range = it } }
             }
@@ -163,7 +213,22 @@ fun RoutineProgressScreen(nav: NavController, initialName: String) {
             items(sessions.reversed(), key = { it.workoutId }) { r ->
                 Card(onClick = { nav.navigate("workoutDetail/${r.workoutId}") }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(fmtDate(r.date), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Column(Modifier.weight(1f)) {
+                            Text(fmtDate(r.date), fontWeight = FontWeight.SemiBold)
+                            Text(
+                                r.title, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                            // Explica saltos no volume: exercícios a mais/menos que na sessão anterior
+                            if (r.added > 0 || r.removed > 0) {
+                                Text(
+                                    s.exercisesDiff(r.added, r.removed),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(fmtVolume(r.volumeKg, lbs))
                             Text(s.setsN(r.sets), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

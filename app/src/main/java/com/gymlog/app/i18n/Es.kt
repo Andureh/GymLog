@@ -279,6 +279,11 @@ object Es : Strings() {
     override val best = "Mejor"
     override val change = "Evolución"
     override val viewProgress = "Ver progreso"
-    override val routineGroupingNote = "Los entrenos se agrupan por nombre: los entrenos con el mismo nombre cuentan como la misma rutina."
+    override val routineGroupingNote = "Los entrenos iniciados desde una rutina siempre se quedan en ella, aunque cambies el título o los ejercicios. Los entrenos antiguos e importados se agrupan por sus ejercicios; puedes corregirlo en el detalle del entreno (⋮ → Rutina de este entreno)."
     override val noRoutineData = "Aún no hay entrenos terminados."
+    override val autoDetected = "Detectada automáticamente por los ejercicios de los entrenos."
+    override val assignRoutine = "Rutina de este entreno"
+    override val routineAuto = "Automático (por ejercicios)"
+    override val exercisesWord = "ejercicios"
+    override fun routineOf(name: String) = "Rutina: $name"
 }

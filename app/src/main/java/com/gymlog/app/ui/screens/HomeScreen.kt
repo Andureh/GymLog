@@ -212,7 +212,7 @@ fun HomeScreen(nav: NavController) {
                     onStart = { start { repo.startFromRoutine(r.routine.id) } },
                     onEdit = { nav.navigate("routine/${r.routine.id}") },
                     onDelete = { toDelete = r },
-                    onProgress = { nav.navigate("routineProgress?name=" + android.net.Uri.encode(r.routine.name)) },
+                    onProgress = { nav.navigate("routineProgress?key=" + android.net.Uri.encode("r:${r.routine.id}")) },
                 )
             }
         }

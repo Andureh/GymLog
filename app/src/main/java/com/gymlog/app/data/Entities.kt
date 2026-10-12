@@ -26,7 +26,11 @@ data class Exercise(
     val nameKey: String? = null,
 )
 
-@Entity(tableName = "workouts", indices = [Index("startTime")])
+@Entity(
+    tableName = "workouts",
+    foreignKeys = [ForeignKey(Routine::class, ["id"], ["routineId"], onDelete = ForeignKey.SET_NULL)],
+    indices = [Index("startTime"), Index("routineId")],
+)
 data class Workout(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -34,6 +38,11 @@ data class Workout(
     /** null = treino em curso */
     val endTime: Long? = null,
     val notes: String = "",
+    /**
+     * Rotina a que o treino pertence (definida ao iniciar a partir de uma rotina, ou escolhida à mão).
+     * null = sem ligação; os gráficos por rotina detetam-na pelos exercícios.
+     */
+    val routineId: Long? = null,
 )
 
 @Entity(
