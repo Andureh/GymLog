@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
@@ -211,6 +212,7 @@ fun HomeScreen(nav: NavController) {
                     onStart = { start { repo.startFromRoutine(r.routine.id) } },
                     onEdit = { nav.navigate("routine/${r.routine.id}") },
                     onDelete = { toDelete = r },
+                    onProgress = { nav.navigate("routineProgress?name=" + android.net.Uri.encode(r.routine.name)) },
                 )
             }
         }
@@ -229,7 +231,7 @@ fun HomeScreen(nav: NavController) {
 }
 
 @Composable
-private fun RoutineCard(r: RoutineFull, onStart: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun RoutineCard(r: RoutineFull, onStart: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onProgress: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val s = LocalStrings.current
     Card(onClick = onEdit) {
@@ -239,6 +241,10 @@ private fun RoutineCard(r: RoutineFull, onStart: () -> Unit, onEdit: () -> Unit,
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, s.options) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(s.viewProgress) }, leadingIcon = { Icon(Icons.Default.ShowChart, null) },
+                            onClick = { menu = false; onProgress() },
+                        )
                         DropdownMenuItem(
                             text = { Text(s.edit) }, leadingIcon = { Icon(Icons.Default.Edit, null) },
                             onClick = { menu = false; onEdit() },

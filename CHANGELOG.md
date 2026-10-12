@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5
+- New **Progress by routine** screen: total volume and total sets of each routine over time, with average, best and change for the selected period, plus the list of sessions.
+- Open it from a routine's menu (**View progress**) or from **Profile**.
+- Workouts are grouped by name, so workouts imported from Hevy are included.
+
 ## 1.4
 - 11 new exercises in the catalog (Bench Press (Smith), Iso-Lateral Chest Press, Chest Supported Incline Row, Chest Supported T Bar Row, Iso-Lateral High Row, Seated Lateral Raise, Leg Press Horizontal, Standing Calf Raise (Smith), Decline Crunch (Weighted), Cycling, Walking).
 - Custom exercises with the same name are automatically converted into the catalog ones, keeping their history.

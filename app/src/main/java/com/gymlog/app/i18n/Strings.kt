@@ -295,6 +295,17 @@ abstract class Strings {
     abstract fun hevyDone(imported: Int, skipped: Int): String
     abstract val hevyError: String
 
+    // ---------- Progresso por rotina ----------
+    abstract val routineProgress: String
+    abstract val routineProgressDesc: String
+    abstract val totalSets: String
+    abstract val average: String
+    abstract val best: String
+    abstract val change: String
+    abstract val viewProgress: String
+    abstract val routineGroupingNote: String
+    abstract val noRoutineData: String
+
     // ---------- Derivados ----------
     fun exerciseType(t: ExerciseType) = when (t) {
         ExerciseType.WEIGHT_REPS -> typeWeightReps

@@ -23,6 +23,7 @@ A free Android app to log your gym workouts and track your progress, inspired by
 ### Progress
 - **Per-exercise charts**: estimated 1RM, heaviest weight, best set, volume and reps, over 1M / 3M / 6M / 1Y / All.
 - Personal records and "best weight for each rep count".
+- **Progress by routine**: total volume and total sets of each routine over time.
 - Unlimited history, grouped by month.
 - Statistics: workouts and volume per week, sets per muscle group, weekly training streak.
 - Body weight log with chart.

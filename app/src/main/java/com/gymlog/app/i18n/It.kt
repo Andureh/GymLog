@@ -270,4 +270,15 @@ object It : Strings() {
     override fun hevyWeights(n: Int) = "$n registrazioni di peso corporeo."
     override fun hevyDone(imported: Int, skipped: Int) = "Importati $imported allenamenti" + if (skipped > 0) " ($skipped già presenti)" else ""
     override val hevyError = "Impossibile leggere il file di Hevy"
+
+    // ---------- Progresso por rotina ----------
+    override val routineProgress = "Progressi per scheda"
+    override val routineProgressDesc = "Volume e serie di ogni scheda nel tempo"
+    override val totalSets = "Serie totali"
+    override val average = "Media"
+    override val best = "Migliore"
+    override val change = "Variazione"
+    override val viewProgress = "Vedi progressi"
+    override val routineGroupingNote = "Gli allenamenti sono raggruppati per nome: allenamenti con lo stesso nome contano come la stessa scheda."
+    override val noRoutineData = "Ancora nessun allenamento completato."
 }

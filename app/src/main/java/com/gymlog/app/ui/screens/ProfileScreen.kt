@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MonitorWeight
@@ -242,6 +243,17 @@ fun ProfileScreen(nav: NavController) {
                 }
             }
 
+            item {
+                Spacer(Modifier.height(8.dp))
+                SettingRow(
+                    icon = { Icon(Icons.Default.ShowChart, null) },
+                    title = s.routineProgress,
+                    subtitle = s.routineProgressDesc,
+                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                    onClick = { nav.navigate("routineProgress") },
+                )
+            }
+
             item { SectionTitle(s.body) }
             item {
                 val last = weights.firstOrNull()
@@ -386,7 +398,7 @@ fun ProfileScreen(nav: NavController) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
                 Text(
-                    "GymLog 1.4",
+                    "GymLog 1.5",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
