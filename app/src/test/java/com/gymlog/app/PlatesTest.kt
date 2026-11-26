@@ -75,4 +75,15 @@ class PlatesTest {
         val s = GymState(listOf(g), "g1", mapOf(5L to LoadSetup("olympic", 1)))
         assertEquals(s, GymStore.fromJson(GymStore.toJson(s)))
     }
+
+    @Test fun oldGymJsonGetsDefaultDumbbells() {
+        val old = org.json.JSONObject(
+            """{"activeId":"g1","gyms":[{"id":"g1","name":"G","lbs":false,"plates":[{"w":20,"pairs":2}],"bars":[]}]}"""
+        )
+        val s = GymStore.fromJson(old)
+        assertEquals(com.gymlog.app.data.defaultDumbbells(false), s.active.dumbbells)
+        assertEquals(false, s.dumbbellSum)
+        val withSum = s.copy(dumbbellSum = true)
+        assertEquals(withSum, GymStore.fromJson(GymStore.toJson(withSum)))
+    }
 }

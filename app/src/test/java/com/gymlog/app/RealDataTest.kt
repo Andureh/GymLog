@@ -52,7 +52,12 @@ class RealDataTest {
                     val topA = a.sets.maxOf { it.weight }
                     val topB = b.sets.maxOf { it.weight }
                     val avg = { ss: List<SetHistoryRow>, t: Double -> ss.filter { it.weight >= t - 1e-6 }.map { it.reps }.average() }
-                    if (topB > topA + 1e-6 || (topB == topA && avg(b.sets, topB) > avg(a.sets, topA))) wrongDeloads++
+                    if (topB > topA + 1e-6 || (topB == topA && avg(b.sets, topB) > avg(a.sets, topA))) {
+                        wrongDeloads++
+                        println("Alívio errado em ${ex.getString("name")}: " + history.takeLast(5).joinToString(" ; ") { h ->
+                            h.sets.joinToString(",") { "${it.weight}x${it.reps}" }
+                        } + " → $s")
+                    }
                 }
             }
         }

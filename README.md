@@ -20,6 +20,7 @@ A free Android app to log your gym workouts and track your progress, inspired by
 - **122 built-in exercises** with search and muscle filters, plus your own custom exercises.
 - **Exercise photos** (start and end position, alternating) and a shortcut to technique videos on YouTube.
 - **Plate calculator** with per-gym plates and bars: which plates to load for a given weight, with or without a bar, on one or both sides.
+- **Per-gym dumbbells**: suggestions only propose dumbbell weights your gym has, and you choose per exercise whether you log one dumbbell or the total of both.
 
 ### Progress
 - **Per-exercise charts**: estimated 1RM, heaviest weight, best set, volume and reps, over 1M / 3M / 6M / 1Y / All.
@@ -31,7 +32,7 @@ A free Android app to log your gym workouts and track your progress, inspired by
 
 ### Optional helpers
 Each one can be switched on or off in **Profile → Training helpers**.
-- 💡 **Progression suggestions**: proposes the next weight and reps based on your previous sessions — double progression with weight steps learned from your history or your gym's plates, a fresh start after long breaks, and a ~10% deload only when you've genuinely stalled.
+- 💡 **Progression suggestions**: proposes the next weight and reps based on your previous sessions — double progression with weight steps learned from your history or your gym's plates and dumbbells, extra reps before big jumps, a fresh start after long breaks, and a ~10% deload only when you've genuinely stalled.
 - 🤖 **AI coach (Google Gemini)**: chat with a coach that sees your training history and can analyse workouts. Uses your own free API key (see below). **Off by default.**
 
 ### Data

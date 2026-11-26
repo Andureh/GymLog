@@ -4,6 +4,7 @@ import com.gymlog.app.data.ExerciseType
 import com.gymlog.app.data.SetType
 import com.gymlog.app.util.KG_TO_LB
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -18,6 +19,9 @@ private const val DAY = 86_400_000L
 const val BREAK_DAYS = 21
 
 private const val EPS = 1e-6
+
+/** Quando o salto de peso é grande, quantas repetições a mais (acima da gama) se pedem antes de subir. */
+const val MAX_EXTRA_REPS = 6
 
 /** Incremento por defeito em kg (2,5 kg barra/máquinas, 2 kg halteres; 5 lb em libras). */
 fun weightIncrement(equipment: String, lbs: Boolean): Double = when {
@@ -58,10 +62,17 @@ private fun roundWeight(w: Double): Double {
     return if (abs(q - w) < 0.02) q else (w * 10).roundToInt() / 10.0
 }
 
-/** Gama de repetições: a do objetivo da rotina, se houver; senão a mediana das tuas últimas sessões. */
-private fun repRange(recent: List<Perf>, targetReps: Int?): Pair<Int, Int> {
+/**
+ * Gama de repetições: a do objetivo da rotina, se houver; senão a mediana das tuas sessões com os pesos
+ * anteriores ao atual. As repetições extra pedidas antes de um salto grande não contam, para a gama
+ * não ir subindo sozinha.
+ */
+private fun repRange(perfs: List<Perf>, targetReps: Int?): Pair<Int, Int> {
     if (targetReps != null && targetReps > 0) return max(1, (targetReps * 2 + 2) / 3) to targetReps
-    val reps = recent.takeLast(3).flatMap { it.repsAtTop }.sorted()
+    val current = perfs.last().top
+    val earlier = perfs.filter { abs(it.top - current) > EPS }.takeLast(6)
+    val source = if (earlier.size >= 2) earlier else perfs.takeLast(3)
+    val reps = source.flatMap { it.repsAtTop }.sorted()
     val median = reps[reps.size / 2]
     return when {
         median <= 5 -> 3 to 5
@@ -74,13 +85,18 @@ private fun repRange(recent: List<Perf>, targetReps: Int?): Pair<Int, Int> {
 /**
  * Sugestão de progressão dupla a partir das sessões anteriores ([history] por ordem cronológica):
  * 1. Pausa de mais de [BREAK_DAYS] dias → retoma com o peso e as repetições da última vez.
- * 2. Todas as séries com o peso de topo chegaram ao limite da gama → sobe o peso; as repetições
- *    para o peso novo são estimadas pelo teu 1RM (fórmula de Epley).
+ * 2. Todas as séries com o peso de topo chegaram ao limite da gama → sobe para o peso seguinte
+ *    (o próximo halter que existe, se houver [ladder]); as repetições para o peso novo são estimadas
+ *    pelo teu 1RM (fórmula de Epley). Se o salto for grande (ex.: halteres de 10 → 12 kg), o limite da
+ *    gama sobe até [MAX_EXTRA_REPS] repetições: só se sobe quando, no peso novo, ainda dá para fazer o
+ *    mínimo da gama.
  * 3. Estagnação real → alívio de ~10% com as mesmas repetições. Só quando, sem pausas, as 3 últimas sessões não melhoraram
- *    (nem em peso nem em repetições) em relação à anterior a elas, e não baixaste o peso tu mesmo.
+ *    (nem em peso nem em repetições) em relação à anterior a elas, não baixaste o peso tu mesmo, ainda não
+ *    chegas ao topo da gama e a última sessão não foi melhor do que a anterior.
  * 4. Caso contrário → mesmo peso, mais uma repetição.
  *
- * [targetReps]: repetições objetivo da rotina; [plateIncrement]: degrau dos discos do ginásio.
+ * [targetReps]: repetições objetivo da rotina; [plateIncrement]: degrau dos discos do ginásio;
+ * [ladder]: pesos possíveis (kg, como se registam), ex.: os halteres do ginásio.
  */
 fun suggestNext(
     type: ExerciseType,
@@ -90,6 +106,7 @@ fun suggestNext(
     targetReps: Int? = null,
     now: Long = System.currentTimeMillis(),
     plateIncrement: Double? = null,
+    ladder: List<Double>? = null,
 ): Suggestion? {
     val lastSession = history.lastOrNull() ?: return null
     val afterBreak = now - lastSession.date > BREAK_DAYS * DAY
@@ -117,8 +134,13 @@ fun suggestNext(
 
             if (afterBreak) return Suggestion(SuggestKind.RESUME, top, minReps)
 
-            if (minReps >= upper) {
-                val next = roundWeight(top + inc)
+            // Próximo peso: o seguinte que existe (halteres do ginásio) ou + o degrau
+            val next = ladder?.firstOrNull { it > top + 0.05 } ?: roundWeight(top + inc)
+            // Repetições precisas no peso atual para, no peso novo, ainda fazer o mínimo da gama
+            val needed = ceil(30 * (e1rm(next, lower) / top - 1) - 1e-9).toInt()
+            val effUpper = if (upper <= 5) upper else needed.coerceIn(upper, upper + MAX_EXTRA_REPS)
+
+            if (minReps >= effUpper) {
                 // Mantém o 1RM estimado no peso novo: reps = 30 × (1RM / peso − 1)
                 val est = e1rm(top, minReps)
                 val reps = if (upper <= 5) minReps
@@ -135,11 +157,17 @@ fun suggestNext(
             recent.reverse()
             val window = recent.takeLast(4)
             val loweredOnPurpose = window.zipWithNext().any { (a, b) -> b.top < a.top - EPS }
-            if (window.size == 4 && !loweredOnPurpose && window.drop(1).none { it.betterThan(window[0]) }) {
-                val deload = max(inc, roundWeight(((top * 0.9) / inc).roundToInt() * inc))
+            // Não é estagnação se: já chegas ao topo normal da gama (o salto é que é grande),
+            // ou a última sessão foi melhor do que a anterior (estás a recuperar)
+            val improvedLast = window.size >= 2 && window.last().betterThan(window[window.size - 2])
+            if (window.size == 4 && !loweredOnPurpose && minReps < upper && !improvedLast &&
+                window.drop(1).none { it.betterThan(window[0]) }
+            ) {
+                val deload = ladder?.lastOrNull { it <= top * 0.9 + 0.05 }
+                    ?: max(inc, roundWeight(((top * 0.9) / inc).roundToInt() * inc))
                 return Suggestion(SuggestKind.DELOAD, deload, minReps)
             }
-            return Suggestion(SuggestKind.REPS, top, (minReps + 1).coerceAtMost(upper))
+            return Suggestion(SuggestKind.REPS, top, (minReps + 1).coerceAtMost(effUpper))
         }
     }
 }

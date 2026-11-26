@@ -323,4 +323,17 @@ object De : Strings() {
     override fun useWeight(w: String) = "$w verwenden"
     override fun forgotText(time: String, duration: String) = "Dein letzter Satz war um $time. Training zu dieser Zeit beenden (Dauer $duration)?"
     override fun finishAt(time: String) = "Um $time beenden"
+
+    // ---------- Halteres ----------
+    override val dumbbells = "Kurzhanteln"
+    override val addDumbbell = "Hinzufügen"
+    override val dumbbellWeight = "Hantelgewicht"
+    override val dumbbellSum = "Standardmäßig erfasse ich die Summe beider Hanteln"
+    override val dumbbellSumDesc = "Z. B. zwei 10-kg-Hanteln als 20 kg erfasst. Pro Übung änderbar (⋮ → Erfasstes Gewicht). Vorschläge nutzen nur Gewichte, die mit deinen Hanteln möglich sind."
+    override val tapToRemove = "Tippe auf ein Gewicht, um es zu entfernen."
+    override val loggedWeight = "Erfasstes Gewicht"
+    override val oneDumbbell = "Eine Hantel"
+    override val oneDumbbellDesc = "Z. B. zwei 10-kg-Hanteln → ich erfasse 10 kg"
+    override val bothDumbbells = "Beide Hanteln (Summe)"
+    override val bothDumbbellsDesc = "Z. B. zwei 10-kg-Hanteln → ich erfasse 20 kg"
 }

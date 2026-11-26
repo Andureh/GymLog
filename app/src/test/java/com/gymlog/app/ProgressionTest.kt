@@ -10,6 +10,11 @@ import com.gymlog.app.data.WorkoutExercise
 import com.gymlog.app.data.WorkoutExerciseFull
 import com.gymlog.app.data.WorkoutFull
 import com.gymlog.app.data.WorkoutSet
+import com.gymlog.app.data.GymState
+import com.gymlog.app.data.GymStore
+import com.gymlog.app.data.defaultDumbbells
+import com.gymlog.app.data.dumbbellLadderKg
+import com.gymlog.app.data.dumbbellMultiplier
 import com.gymlog.app.domain.SuggestKind
 import com.gymlog.app.domain.buildSessions
 import com.gymlog.app.domain.learnIncrement
@@ -30,11 +35,15 @@ class ProgressionTest {
         SetHistoryRow(d, "W$d", d * day, id++, w, r, 0, SetType.NORMAL)
     }
 
-    private fun suggest(rows: List<SetHistoryRow>, equipment: String = "barbell", now: Long? = null, target: Int? = null) =
-        suggestNext(
-            ExerciseType.WEIGHT_REPS, equipment, buildSessions(rows), false,
-            targetReps = target, now = now ?: (rows.maxOf { it.startTime } + 3 * day),
-        )!!
+    private fun suggest(
+        rows: List<SetHistoryRow>, equipment: String = "barbell", now: Long? = null, target: Int? = null, ladder: List<Double>? = null,
+    ) = suggestNext(
+        ExerciseType.WEIGHT_REPS, equipment, buildSessions(rows), false,
+        targetReps = target, now = now ?: (rows.maxOf { it.startTime } + 3 * day), ladder = ladder,
+    )!!
+
+    /** Halteres comuns registados como a soma dos dois (2 × 10 kg = 20 kg). */
+    private val sumLadder = defaultDumbbells(false).map { it * 2 }
 
     @Test fun moreRepsWhenBelowTopOfRange() {
         val s = suggest(session(1, 80.0 to 10, 80.0 to 9, 80.0 to 8))
@@ -67,7 +76,7 @@ class ProgressionTest {
     }
 
     @Test fun deloadOnlyWhenReallyStalled() {
-        val rows = session(1, 100.0 to 6) + session(4, 100.0 to 6) + session(8, 100.0 to 5) + session(11, 100.0 to 6)
+        val rows = session(1, 100.0 to 6) + session(4, 100.0 to 6) + session(8, 100.0 to 6) + session(11, 100.0 to 6)
         val s = suggest(rows)
         assertEquals(SuggestKind.DELOAD, s.kind)
         assertEquals(90.0, s.weight, 1e-9)
@@ -83,6 +92,13 @@ class ProgressionTest {
         val s = suggest(rows, equipment = "cable")
         assertEquals(SuggestKind.UP, s.kind)
         assertTrue(s.weight > 60.0)
+    }
+
+    /** Caso real (curl 18 kg): as reps desceram mas a última sessão melhorou → nada de alívio. */
+    @Test fun noDeloadRightAfterImprovement() {
+        val rows = session(1, 18.0 to 15, 18.0 to 15) + session(5, 18.0 to 15, 18.0 to 11) +
+            session(9, 18.0 to 13, 18.0 to 10) + session(13, 18.0 to 12, 18.0 to 12, 18.0 to 12)
+        assertNotEquals(SuggestKind.DELOAD, suggest(rows, equipment = "dumbbell", target = 15).kind)
     }
 
     /** Caso real: depois de baixares o peso tu mesmo, não volta a pedir para baixar. */
@@ -132,5 +148,76 @@ class ProgressionTest {
         assertTrue(txt, txt.contains("Bench Press (Barbell): 80x8"))
         assertTrue(txt.contains("WORKOUT THE USER IS ASKING ABOUT"))
         assertTrue(txt.contains("Push A"))
+    }
+
+    /** Caso real: elevações laterais com 2 × 10 kg; o halter seguinte é 12 kg (24 no total), não 11. */
+    @Test fun dumbbellsOnlySuggestExistingWeights() {
+        val rows = session(1, 20.0 to 12, 20.0 to 12, 20.0 to 12) + session(5, 20.0 to 13, 20.0 to 13, 20.0 to 13)
+        val s = suggest(rows, equipment = "dumbbell", ladder = sumLadder)
+        // Salto de 20 para 24 kg (20%) é grande: primeiro mais repetições
+        assertEquals(SuggestKind.REPS, s.kind)
+        assertEquals(20.0, s.weight, 1e-9)
+        assertEquals(14, s.reps)
+    }
+
+    @Test fun bigJumpAfterEnoughReps() {
+        // Antes: 2 × 9 kg a 12 reps; agora 2 × 10 kg, já com as repetições extra
+        val rows = session(1, 18.0 to 12, 18.0 to 12) + session(4, 18.0 to 12, 18.0 to 12) +
+            session(8, 20.0 to 12, 20.0 to 12) + session(12, 20.0 to 14, 20.0 to 14) + session(16, 20.0 to 16, 20.0 to 16, 20.0 to 16)
+        val s = suggest(rows, equipment = "dumbbell", ladder = sumLadder)
+        assertEquals(SuggestKind.UP, s.kind)
+        assertEquals(24.0, s.weight, 1e-9)
+        assertEquals(8, s.reps)
+    }
+
+    @Test fun smallJumpKeepsNormalRange() {
+        // 2 × 5 → 2 × 6 kg com 12 reps? 10 → 12 kg é 20%: mais reps. Já 2 × 30 → 2 × 32,5 (8%) sobe logo às 12.
+        val rows = session(1, 60.0 to 12, 60.0 to 12, 60.0 to 12)
+        val s = suggest(rows, equipment = "dumbbell", ladder = sumLadder)
+        assertEquals(SuggestKind.UP, s.kind)
+        assertEquals(65.0, s.weight, 1e-9)
+    }
+
+    @Test fun ladderForSingleDumbbellExercises() {
+        val gym = GymStore.defaultGym(false)
+        val two = Exercise(id = 1, name = "x", muscle = "shoulders", equipment = "dumbbell", nameKey = "lateral_raise_db")
+        val one = Exercise(id = 2, name = "y", muscle = "back", equipment = "dumbbell", nameKey = "one_arm_row_db")
+        val state = GymState(listOf(gym), gym.id, emptyMap(), dumbbellSum = true)
+        assertTrue(24.0 in dumbbellLadderKg(state, two)!!)
+        assertTrue(22.0 !in dumbbellLadderKg(state, two)!!)
+        assertTrue(11.0 !in dumbbellLadderKg(state, one)!!)
+        assertTrue(12.0 in dumbbellLadderKg(state, one)!!)
+        assertNull(dumbbellLadderKg(state, two.copy(equipment = "barbell")))
+    }
+
+    /** Com o objetivo da rotina (12), as repetições extra não mudam a gama. */
+    @Test fun routineTargetWithBigJump() {
+        val rows = session(1, 20.0 to 13, 20.0 to 13) + session(5, 20.0 to 15, 20.0 to 15) + session(9, 20.0 to 16, 20.0 to 16)
+        val s = suggest(rows, equipment = "dumbbell", ladder = sumLadder, target = 12)
+        assertEquals(SuggestKind.UP, s.kind)
+        assertEquals(24.0, s.weight, 1e-9)
+    }
+
+    /** No topo da gama mas com um salto grande à frente: mais reps, nunca alívio. */
+    @Test fun noDeloadWhileExtendingReps() {
+        val rows = session(1, 20.0 to 12, 20.0 to 12) + session(4, 20.0 to 12, 20.0 to 12) +
+            session(8, 20.0 to 12, 20.0 to 12) + session(11, 20.0 to 12, 20.0 to 12)
+        val s = suggest(rows, equipment = "dumbbell", ladder = sumLadder, target = 12)
+        assertEquals(SuggestKind.REPS, s.kind)
+        assertEquals(13, s.reps)
+    }
+
+    /** Escolha por exercício: "de um halter" ou "dos dois" sobrepõe-se ao valor por defeito. */
+    @Test fun perExerciseDumbbellCount() {
+        val gym = GymStore.defaultGym(false)
+        val lateral = Exercise(id = 7, name = "x", muscle = "shoulders", equipment = "dumbbell", nameKey = "lateral_raise_db")
+        val base = GymState(listOf(gym), gym.id, emptyMap(), dumbbellSum = false)
+        assertEquals(1, dumbbellMultiplier(base, lateral))
+        val both = base.copy(dumbbellCounts = mapOf(7L to 2))
+        assertEquals(2, dumbbellMultiplier(both, lateral))
+        assertTrue(24.0 in dumbbellLadderKg(both, lateral)!!)
+        val one = both.copy(dumbbellSum = true, dumbbellCounts = mapOf(7L to 1))
+        assertEquals(1, dumbbellMultiplier(one, lateral))
+        assertEquals(both, GymStore.fromJson(GymStore.toJson(both)))
     }
 }

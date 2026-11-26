@@ -323,4 +323,17 @@ object It : Strings() {
     override fun useWeight(w: String) = "Usa $w"
     override fun forgotText(time: String, duration: String) = "L'ultima serie è stata alle $time. Terminare l'allenamento a quell'ora (durata $duration)?"
     override fun finishAt(time: String) = "Termina alle $time"
+
+    // ---------- Halteres ----------
+    override val dumbbells = "Manubri"
+    override val addDumbbell = "Aggiungi"
+    override val dumbbellWeight = "Peso del manubrio"
+    override val dumbbellSum = "Di default registro la somma dei due manubri"
+    override val dumbbellSumDesc = "Es.: due manubri da 10 kg registrati come 20 kg. Puoi cambiarlo per ogni esercizio (⋮ → Peso registrato). I suggerimenti usano solo pesi possibili con i tuoi manubri."
+    override val tapToRemove = "Tocca un peso per rimuoverlo."
+    override val loggedWeight = "Peso registrato"
+    override val oneDumbbell = "Di un manubrio"
+    override val oneDumbbellDesc = "Es.: due manubri da 10 kg → registro 10 kg"
+    override val bothDumbbells = "Dei due manubri (somma)"
+    override val bothDumbbellsDesc = "Es.: due manubri da 10 kg → registro 20 kg"
 }

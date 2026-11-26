@@ -414,7 +414,7 @@ fun ProfileScreen(nav: NavController) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
                 Text(
-                    "GymLog 1.7",
+                    "GymLog 1.8",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),

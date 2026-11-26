@@ -2,6 +2,7 @@ package com.gymlog.app.data
 
 import android.content.Context
 import com.gymlog.app.i18n.I18n
+import com.gymlog.app.util.KG_TO_LB
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
@@ -21,16 +22,49 @@ data class Gym(
     val lbs: Boolean,
     val plates: List<PlateSpec>,
     val bars: List<BarSpec>,
+    /** Pesos dos halteres disponíveis (cada halter), na unidade do ginásio. */
+    val dumbbells: List<Double> = defaultDumbbells(lbs),
 )
 
 /** Como se carrega um exercício: que barra ([NO_BAR] = sem barra) e de quantos lados (1 ou 2). */
 data class LoadSetup(val barId: String, val sides: Int = 2)
 
-data class GymState(val gyms: List<Gym>, val activeId: String, val setups: Map<Long, LoadSetup>) {
+data class GymState(
+    val gyms: List<Gym>,
+    val activeId: String,
+    val setups: Map<Long, LoadSetup>,
+    /** Por defeito, nos exercícios com dois halteres regista-se a soma dos dois (ex.: 2 × 10 kg = 20 kg). */
+    val dumbbellSum: Boolean = false,
+    /** Escolha por exercício: o peso registado é de 1 halter ou da soma de 2 (sobrepõe-se a [dumbbellSum]). */
+    val dumbbellCounts: Map<Long, Int> = emptyMap(),
+) {
     val active: Gym get() = gyms.find { it.id == activeId } ?: gyms.first()
 }
 
 const val NO_BAR = "none"
+
+/** Exercícios feitos com um só halter (a soma de dois halteres não se aplica). */
+val SINGLE_DUMBBELL = setOf("one_arm_row_db", "concentration_curl", "kickback", "overhead_ext_db", "pullover_db", "goblet_squat")
+
+/** Halteres comuns: 1–10 kg de 1 em 1, depois de 2 em 2 até 30 e de 2,5 em 2,5 até 50 (em libras, de 5 em 5). */
+fun defaultDumbbells(lbs: Boolean): List<Double> =
+    if (lbs) (1..20).map { it * 5.0 }
+    else (1..10).map { it.toDouble() } + (12..30 step 2).map { it.toDouble() } + (13..20).map { it * 2.5 }
+
+/** Quantos halteres conta o peso registado neste exercício (2 se se regista a soma dos dois). */
+fun dumbbellMultiplier(state: GymState, exercise: Exercise): Int =
+    state.dumbbellCounts[exercise.id] ?: if (state.dumbbellSum && exercise.nameKey !in SINGLE_DUMBBELL) 2 else 1
+
+/**
+ * Pesos possíveis (kg, como se registam) num exercício de halteres, pelos halteres do ginásio ativo.
+ * null se não for um exercício de halteres.
+ */
+fun dumbbellLadderKg(state: GymState, exercise: Exercise): List<Double>? {
+    if (exercise.equipment != "dumbbell") return null
+    val gym = state.active
+    val m = dumbbellMultiplier(state, exercise)
+    return gym.dumbbells.map { (if (gym.lbs) it / KG_TO_LB else it) * m }.sorted().ifEmpty { null }
+}
 
 /** Ginásios guardados nas preferências (JSON). Também entram na cópia de segurança. */
 class GymStore(ctx: Context) {
@@ -60,6 +94,8 @@ class GymStore(ctx: Context) {
     fun deleteGym(id: String) = update { s -> s.copy(gyms = s.gyms.filter { it.id != id }) }
     fun setActive(id: String) = update { it.copy(activeId = id) }
     fun setSetup(exerciseId: Long, setup: LoadSetup) = update { it.copy(setups = it.setups + (exerciseId to setup)) }
+    fun setDumbbellSum(sum: Boolean) = update { it.copy(dumbbellSum = sum) }
+    fun setDumbbellCount(exerciseId: Long, count: Int) = update { it.copy(dumbbellCounts = it.dumbbellCounts + (exerciseId to count)) }
 
     /** Barra por defeito de um exercício, pelo equipamento (barra olímpica, EZ, Smith; máquinas sem barra). */
     fun setupFor(exerciseId: Long?, equipment: String?): LoadSetup {
@@ -92,14 +128,17 @@ class GymStore(ctx: Context) {
 
         fun toJson(s: GymState): JSONObject = JSONObject()
             .put("activeId", s.activeId)
+            .put("dumbbellSum", s.dumbbellSum)
             .put("gyms", JSONArray().apply {
                 s.gyms.forEach { g ->
                     put(JSONObject().put("id", g.id).put("name", g.name).put("lbs", g.lbs)
                         .put("plates", JSONArray().apply { g.plates.forEach { put(JSONObject().put("w", it.weight).put("pairs", it.pairs)) } })
-                        .put("bars", JSONArray().apply { g.bars.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("w", it.weight)) } }))
+                        .put("bars", JSONArray().apply { g.bars.forEach { put(JSONObject().put("id", it.id).put("name", it.name).put("w", it.weight)) } })
+                        .put("dumbbells", JSONArray().apply { g.dumbbells.forEach { put(it) } }))
                 }
             })
             .put("setups", JSONObject().apply { s.setups.forEach { (k, v) -> put(k.toString(), JSONObject().put("bar", v.barId).put("sides", v.sides)) } })
+            .put("dumbbellCounts", JSONObject().apply { s.dumbbellCounts.forEach { (k, v) -> put(k.toString(), v) } })
 
         fun fromJson(o: JSONObject): GymState {
             val gyms = o.getJSONArray("gyms").let { a ->
@@ -109,13 +148,17 @@ class GymStore(ctx: Context) {
                     val bars = g.getJSONArray("bars").let { b ->
                         (0 until b.length()).map { val x = b.getJSONObject(it); BarSpec(x.getString("id"), x.getString("name"), x.getDouble("w")) }
                     }
-                    Gym(g.getString("id"), g.getString("name"), g.optBoolean("lbs"), plates, bars)
+                    val lbs = g.optBoolean("lbs")
+                    // Ginásios guardados antes da v1.8 não tinham halteres: usa a lista comum
+                    val dumbbells = g.optJSONArray("dumbbells")?.let { d -> (0 until d.length()).map { d.getDouble(it) } } ?: defaultDumbbells(lbs)
+                    Gym(g.getString("id"), g.getString("name"), lbs, plates, bars, dumbbells)
                 }
             }
             val setups = o.optJSONObject("setups")?.let { m ->
                 m.keys().asSequence().associate { k -> k.toLong() to m.getJSONObject(k).let { LoadSetup(it.getString("bar"), it.optInt("sides", 2)) } }
             } ?: emptyMap()
-            return GymState(gyms, o.optString("activeId"), setups)
+            val counts = o.optJSONObject("dumbbellCounts")?.let { m -> m.keys().asSequence().associate { it.toLong() to m.getInt(it) } } ?: emptyMap()
+            return GymState(gyms, o.optString("activeId"), setups, o.optBoolean("dumbbellSum"), counts)
         }
     }
 }

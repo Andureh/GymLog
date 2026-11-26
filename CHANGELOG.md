@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8
+- **Dumbbells per gym**: each gym has its list of available dumbbells (defaults 1–10 kg in 1 kg steps, then 12, 14, 16…; editable). Suggestions for dumbbell exercises only propose weights you can actually make (e.g. 2 × 10 kg → 2 × 12 kg, never 2 × 11 kg).
+- **Logged weight per exercise**: choose whether you log the weight of one dumbbell or the total of both (⋮ → Logged weight), with a default in **Gyms & plates**. Suggestions show the weight of each dumbbell, e.g. "24 kg (2 × 12 kg)". Single-dumbbell exercises (one-arm row, concentration curl, goblet squat…) default to one dumbbell.
+- **Big jumps → more reps first**: when the next available weight is a big jump, suggestions ask for a few extra reps (up to 6) at the current weight until you could still do the bottom of your rep range at the new weight, then suggest the jump.
+- Suggestions never propose a deload right after a session that was better than the previous one, nor while you already reach the top of your rep range.
+- The rep range is inferred from your sessions at previous weights, so extra reps before a big jump don't make it creep upwards.
+
 ## 1.7
 - **Plate calculator**: shows which plates to load (drawn on the bar, with per-side list) for any weight, counting the bar's weight or none for plate-loaded machines, loading on both sides or one side. When your plates can't make the exact weight, it shows the closest options below and above. Open it from an exercise's menu during a workout (it can apply the weight to the remaining sets) or from **Profile**.
 - **Gyms & plates**: set up each gym with its own plates (and how many pairs), bars and unit (kg/lb); the app remembers which bar each exercise uses. Included in backups.

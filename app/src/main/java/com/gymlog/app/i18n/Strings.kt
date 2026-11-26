@@ -350,6 +350,20 @@ abstract class Strings {
     abstract fun forgotText(time: String, duration: String): String
     abstract fun finishAt(time: String): String
 
+    // ---------- Halteres ----------
+    abstract val dumbbells: String
+    abstract val addDumbbell: String
+    abstract val dumbbellWeight: String
+    abstract val dumbbellSum: String
+    abstract val dumbbellSumDesc: String
+    abstract val tapToRemove: String
+
+    abstract val loggedWeight: String
+    abstract val oneDumbbell: String
+    abstract val oneDumbbellDesc: String
+    abstract val bothDumbbells: String
+    abstract val bothDumbbellsDesc: String
+
     // ---------- Derivados ----------
     fun exerciseType(t: ExerciseType) = when (t) {
         ExerciseType.WEIGHT_REPS -> typeWeightReps

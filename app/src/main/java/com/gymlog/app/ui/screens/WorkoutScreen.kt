@@ -100,9 +100,13 @@ import com.gymlog.app.domain.Suggestion
 import com.gymlog.app.domain.suggestNext
 import com.gymlog.app.domain.smallestJump
 import com.gymlog.app.data.NO_BAR
+import com.gymlog.app.data.dumbbellLadderKg
+import com.gymlog.app.data.dumbbellMultiplier
 import com.gymlog.app.util.KG_TO_LB
 import com.gymlog.app.util.fmtSkeleton
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -218,6 +222,7 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
     var showFinish by remember { mutableStateOf(false) }
     var showDiscard by remember { mutableStateOf(false) }
     var platesFor by remember { mutableStateOf<WorkoutExerciseFull?>(null) }
+    var dumbbellsFor by remember { mutableStateOf<WorkoutExerciseFull?>(null) }
     var editDuration by remember { mutableStateOf(false) }
 
     fun toggle(e: WorkoutExerciseFull, s: WorkoutSet, prev: WorkoutSet?) {
@@ -322,12 +327,14 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
                         suggestNext(
                             e.exercise.type, e.exercise.equipment, it, lbs,
                             targetReps = routineTargets[e.exercise.id], plateIncrement = plateInc,
+                            ladder = dumbbellLadderKg(gymState, e.exercise),
                         )
                     }
                 } else null
                 ExerciseBlock(
                     e = e,
                     suggestion = suggestion,
+                    dumbbells = if (e.exercise.equipment == "dumbbell") dumbbellMultiplier(gymState, e.exercise) else 1,
                     onApplySuggestion = { sug ->
                         focus.clearFocus()
                         scope.launch { repo.applySuggestion(e.we.id, sug.weight, sug.reps, sug.duration) }
@@ -351,6 +358,9 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
                     onDeleteSet = { id -> scope.launch { repo.deleteSet(id) } },
                     onPlates = if (e.exercise.equipment in PLATE_EQUIPMENT && e.exercise.type == ExerciseType.WEIGHT_REPS) {
                         { platesFor = e }
+                    } else null,
+                    onLoggedWeight = if (e.exercise.equipment == "dumbbell" && e.exercise.type == ExerciseType.WEIGHT_REPS) {
+                        { dumbbellsFor = e }
                     } else null,
                 )
             }
@@ -459,6 +469,32 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
             onDismiss = { platesFor = null },
             onManageGyms = { nav.navigate("gyms") },
             onApply = { kg -> focus.clearFocus(); scope.launch { repo.setPendingWeight(e.we.id, kg) } },
+        )
+    }
+
+    dumbbellsFor?.let { e ->
+        val current = dumbbellMultiplier(gymState, e.exercise)
+        AlertDialog(
+            onDismissRequest = { dumbbellsFor = null },
+            title = { Text("${str.loggedWeight} · ${str.exName(e.exercise)}") },
+            text = {
+                Column {
+                    listOf(1 to (str.oneDumbbell to str.oneDumbbellDesc), 2 to (str.bothDumbbells to str.bothDumbbellsDesc)).forEach { (n, t) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { app.gyms.setDumbbellCount(e.exercise.id, n); dumbbellsFor = null }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = n == current, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(t.first)
+                                Text(t.second, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { dumbbellsFor = null }) { Text(str.close) } },
         )
     }
 
@@ -598,6 +634,7 @@ private fun setTypeColor(t: SetType, default: Color) = when (t) {
 private fun ExerciseBlock(
     e: WorkoutExerciseFull,
     suggestion: Suggestion?,
+    dumbbells: Int,
     onApplySuggestion: (Suggestion) -> Unit,
     prev: List<WorkoutSet>,
     prMarks: Map<Long, List<PrType>>,
@@ -617,6 +654,7 @@ private fun ExerciseBlock(
     onSetType: (Long, SetType) -> Unit,
     onDeleteSet: (Long) -> Unit,
     onPlates: (() -> Unit)? = null,
+    onLoggedWeight: (() -> Unit)? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     var restDialog by remember { mutableStateOf(false) }
@@ -653,6 +691,11 @@ private fun ExerciseBlock(
                     if (canMoveDown) DropdownMenuItem(
                         text = { Text(s.moveDown) }, leadingIcon = { Icon(Icons.Default.ArrowDownward, null) },
                         onClick = { menu = false; onMove(1) },
+                    )
+                    if (onLoggedWeight != null) DropdownMenuItem(
+                        text = { Text("${s.loggedWeight}: " + if (dumbbells == 2) s.bothDumbbells else s.oneDumbbell) },
+                        leadingIcon = { Icon(Icons.Default.Scale, null) },
+                        onClick = { menu = false; onLoggedWeight() },
                     )
                     if (onPlates != null) DropdownMenuItem(
                         text = { Text(s.plateCalculator) }, leadingIcon = { Icon(Icons.Default.Calculate, null) },
@@ -719,7 +762,9 @@ private fun ExerciseBlock(
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     Text(
-                        setSummary(type, sug.weight, sug.reps, sug.duration, lbs),
+                        setSummary(type, sug.weight, sug.reps, sug.duration, lbs) +
+                            // Quando se regista a soma de dois halteres, mostra o peso de cada um
+                            if (dumbbells == 2 && sug.weight > 0) " (2 × ${fmtWeight(sug.weight / 2, lbs)})" else "",
                         style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )

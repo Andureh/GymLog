@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
 package com.gymlog.app.ui.screens
 
@@ -33,6 +33,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.InputChip
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -91,6 +95,18 @@ fun GymsScreen(nav: NavController) {
         },
     ) { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+            item {
+                Card(onClick = { app.gyms.setDumbbellSum(!state.dumbbellSum) }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(s.dumbbellSum, fontWeight = FontWeight.SemiBold)
+                            Text(s.dumbbellSumDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Switch(state.dumbbellSum, { app.gyms.setDumbbellSum(it) })
+                    }
+                }
+            }
             items(state.gyms, key = { it.id }) { g ->
                 val u = unitLabel(g.lbs)
                 Card(onClick = { editing = g }) {
@@ -111,6 +127,10 @@ fun GymsScreen(nav: NavController) {
                         )
                         Text(
                             "${s.bars}: " + g.bars.joinToString(", ") { "${it.name} ${fmtNum(it.weight)} $u" },
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            "${s.dumbbells}: " + g.dumbbells.sorted().joinToString(", ") { fmtNum(it) } + " $u",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -142,6 +162,8 @@ private fun GymEditor(initial: Gym, canDelete: Boolean, onSave: (Gym) -> Unit, o
     val plates = remember { mutableStateListOf<PlateSpec>().apply { addAll(initial.plates.sortedByDescending { it.weight }) } }
     val bars = remember { mutableStateListOf<Pair<BarSpec, String>>().apply { addAll(initial.bars.map { it to fmtNum(it.weight) }) } }
     var newPlate by remember { mutableStateOf("") }
+    val dumbbells = remember { mutableStateListOf<Double>().apply { addAll(initial.dumbbells.sorted()) } }
+    var newDumbbell by remember { mutableStateOf("") }
     var confirmDelete by remember { mutableStateOf(false) }
     val u = unitLabel(lbs)
 
@@ -160,6 +182,7 @@ private fun GymEditor(initial: Gym, canDelete: Boolean, onSave: (Gym) -> Unit, o
                                         name = name.trim().ifBlank { s.myGym }, lbs = lbs,
                                         plates = plates.filter { it.weight > 0 }.sortedByDescending { it.weight },
                                         bars = bars.mapNotNull { (b, w) -> parseDecimal(w)?.let { b.copy(name = b.name.trim().ifBlank { "—" }, weight = it) } },
+                                        dumbbells = dumbbells.sorted(),
                                     )
                                 )
                             }) { Text(s.save) }
@@ -223,6 +246,32 @@ private fun GymEditor(initial: Gym, canDelete: Boolean, onSave: (Gym) -> Unit, o
                             Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(s.addBar)
+                        }
+                    }
+                    item { SectionTitle(s.dumbbells, Modifier.padding(start = 0.dp)) }
+                    item {
+                        Text(s.tapToRemove, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            dumbbells.sorted().forEach { w ->
+                                InputChip(
+                                    selected = false, onClick = { dumbbells.remove(w) },
+                                    label = { Text(fmtNum(w)) },
+                                    trailingIcon = { Icon(Icons.Default.Close, s.remove, Modifier.size(16.dp)) },
+                                )
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                newDumbbell, { newDumbbell = it }, label = { Text("${s.dumbbellWeight} ($u)") }, singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(onClick = {
+                                parseDecimal(newDumbbell)?.takeIf { it > 0 }?.let { w ->
+                                    if (dumbbells.none { kotlin.math.abs(it - w) < 1e-6 }) dumbbells.add(w)
+                                    newDumbbell = ""
+                                }
+                            }) { Text(s.addDumbbell) }
                         }
                     }
                 }

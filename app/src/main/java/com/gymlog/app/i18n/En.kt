@@ -323,4 +323,17 @@ object En : Strings() {
     override fun useWeight(w: String) = "Use $w"
     override fun forgotText(time: String, duration: String) = "Your last set was at $time. Finish the workout at that time (duration $duration)?"
     override fun finishAt(time: String) = "Finish at $time"
+
+    // ---------- Halteres ----------
+    override val dumbbells = "Dumbbells"
+    override val addDumbbell = "Add"
+    override val dumbbellWeight = "Dumbbell weight"
+    override val dumbbellSum = "By default, I log the total of both dumbbells"
+    override val dumbbellSumDesc = "E.g. two 10 kg dumbbells logged as 20 kg. You can change it per exercise (⋮ → Logged weight). Suggestions only use weights your dumbbells can make."
+    override val tapToRemove = "Tap a weight to remove it."
+    override val loggedWeight = "Logged weight"
+    override val oneDumbbell = "One dumbbell"
+    override val oneDumbbellDesc = "E.g. two 10 kg dumbbells → I log 10 kg"
+    override val bothDumbbells = "Both dumbbells (total)"
+    override val bothDumbbellsDesc = "E.g. two 10 kg dumbbells → I log 20 kg"
 }
