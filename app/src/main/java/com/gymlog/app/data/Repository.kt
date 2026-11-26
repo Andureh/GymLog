@@ -157,8 +157,17 @@ class Repository(private val db: AppDatabase, private val settings: Settings) {
     suspend fun setReps(id: Long, reps: Int) = wDao.setReps(id, reps)
     suspend fun setDuration(id: Long, sec: Int) = wDao.setDuration(id, sec)
     suspend fun setSetType(id: Long, type: SetType) = wDao.setType(id, type)
-    suspend fun setCompleted(id: Long, done: Boolean) = wDao.setCompleted(id, done)
-    suspend fun completeSet(id: Long, kg: Double, reps: Int, sec: Int) = wDao.complete(id, kg, reps, sec)
+    suspend fun setCompleted(id: Long, done: Boolean) = wDao.setCompleted(id, done, System.currentTimeMillis())
+    suspend fun completeSet(id: Long, kg: Double, reps: Int, sec: Int) = wDao.complete(id, kg, reps, sec, System.currentTimeMillis())
+
+    /** Põe o mesmo peso em todas as séries por concluir (ex.: depois da calculadora de discos). */
+    suspend fun setPendingWeight(weId: Long, kg: Double) = wDao.setPendingWeight(weId, kg)
+
+    /** Corrige a duração de um treino terminado. */
+    suspend fun setWorkoutDuration(id: Long, minutes: Int) {
+        val w = wDao.workoutOnce(id) ?: return
+        wDao.setEnd(id, w.startTime + minutes.coerceAtLeast(1) * 60_000L)
+    }
     suspend fun setRest(weId: Long, sec: Int) = wDao.setRest(weId, sec)
     suspend fun setExerciseNotes(weId: Long, notes: String) = wDao.setWeNotes(weId, notes)
     suspend fun removeExercise(weId: Long) = wDao.deleteWe(weId)
@@ -176,17 +185,18 @@ class Repository(private val db: AppDatabase, private val settings: Settings) {
     }
 
     /**
-     * Remove séries por concluir e exercícios vazios. Se [setEnd], marca o treino como terminado.
-     * Devolve false se o treino ficou vazio (e foi eliminado).
+     * Remove séries por concluir e exercícios vazios. Se [setEnd], marca o treino como terminado à hora
+     * [endTime] (por defeito, agora). Devolve false se o treino ficou vazio (e foi eliminado).
      */
-    suspend fun finishWorkout(id: Long, setEnd: Boolean): Boolean = db.withTransaction {
+    suspend fun finishWorkout(id: Long, setEnd: Boolean, endTime: Long = System.currentTimeMillis()): Boolean = db.withTransaction {
         wDao.deleteIncompleteSets(id)
         wDao.deleteEmptyExercises(id)
         if (wDao.wesOf(id).isEmpty()) {
             wDao.deleteWorkout(id)
             false
         } else {
-            if (setEnd) wDao.setEnd(id, System.currentTimeMillis())
+            wDao.trimName(id)
+            if (setEnd) wDao.setEnd(id, endTime)
             true
         }
     }

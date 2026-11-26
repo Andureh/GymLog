@@ -26,19 +26,22 @@ class GymApp : Application() {
         private set
     lateinit var coach: Coach
         private set
+    lateinit var gyms: com.gymlog.app.data.GymStore
+        private set
 
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
         super.onCreate()
         db = Room.databaseBuilder(this, AppDatabase::class.java, "gymlog.db")
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .build()
         settings = Settings(this)
         I18n.apply(settings.current.language)
         repo = Repository(db, settings)
         restTimer = RestTimer(this, appScope)
         coach = Coach(repo, settings, appScope)
+        gyms = com.gymlog.app.data.GymStore(this)
         createChannel()
         appScope.launch {
             val v = repo.syncCatalog(settings.current.catalogVersion)

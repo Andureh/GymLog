@@ -13,8 +13,8 @@ android {
         applicationId = "com.gymlog.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
     }
 
     buildTypes {
@@ -37,7 +37,10 @@ android {
         compose = true
     }
     testOptions {
-        unitTests.all { it.environment("HEVY_CSV", System.getenv("HEVY_CSV") ?: "") }
+        unitTests.all {
+            it.environment("HEVY_CSV", System.getenv("HEVY_CSV") ?: "")
+            it.environment("GYMLOG_BACKUP", System.getenv("GYMLOG_BACKUP") ?: "")
+        }
     }
 }
 
@@ -61,4 +64,5 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

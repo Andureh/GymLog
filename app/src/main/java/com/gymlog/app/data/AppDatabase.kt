@@ -11,7 +11,7 @@ import com.gymlog.app.i18n.Catalog
         Exercise::class, Workout::class, WorkoutExercise::class, WorkoutSet::class,
         Routine::class, RoutineExercise::class, BodyWeight::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,6 +43,13 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE workouts ADD COLUMN routineId INTEGER REFERENCES routines(id) ON UPDATE NO ACTION ON DELETE SET NULL")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_workouts_routineId ON workouts (routineId)")
+            }
+        }
+
+        /** v4: hora em que cada série foi concluída (para detetar treinos que ficaram abertos). */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sets ADD COLUMN completedAt INTEGER")
             }
         }
     }

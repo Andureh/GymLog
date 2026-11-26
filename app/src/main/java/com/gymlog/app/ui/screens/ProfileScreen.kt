@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -149,6 +151,7 @@ fun ProfileScreen(nav: NavController) {
     var restDialog by remember { mutableStateOf(false) }
     var pendingImport by remember { mutableStateOf<android.net.Uri?>(null) }
     var langDialog by remember { mutableStateOf(false) }
+    var plateCalc by remember { mutableStateOf(false) }
     var keyDialog by remember { mutableStateOf(false) }
     var modelDialog by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<String?>(null) }
@@ -160,7 +163,7 @@ fun ProfileScreen(nav: NavController) {
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val ok = runCatching {
-                val json = Backup.export(app.db)
+                val json = Backup.export(app.db, app.gyms)
                 withContext(Dispatchers.IO) {
                     ctx.contentResolver.openOutputStream(uri)!!.use { it.write(json.toByteArray()) }
                 }
@@ -306,6 +309,19 @@ fun ProfileScreen(nav: NavController) {
             item { SectionTitle(s.assistants) }
             item {
                 SettingRow(
+                    icon = { Icon(Icons.Default.Calculate, null) },
+                    title = s.plateCalculator,
+                    subtitle = s.plateCalcDesc,
+                    onClick = { plateCalc = true },
+                )
+                SettingRow(
+                    icon = { Icon(Icons.Default.FitnessCenter, null) },
+                    title = s.gymsAndPlates,
+                    subtitle = s.gymsDesc,
+                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+                    onClick = { nav.navigate("gyms") },
+                )
+                SettingRow(
                     icon = { Icon(Icons.Default.Lightbulb, null) },
                     title = s.suggestionsSetting,
                     subtitle = s.suggestionsDesc,
@@ -398,7 +414,7 @@ fun ProfileScreen(nav: NavController) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
                 Text(
-                    "GymLog 1.6",
+                    "GymLog 1.7",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -427,7 +443,7 @@ fun ProfileScreen(nav: NavController) {
                             ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
                         }
                         app.restTimer.stop()
-                        Backup.import(app.db, json)
+                        Backup.import(app.db, json, app.gyms)
                     }
                     Toast.makeText(
                         ctx,
@@ -460,6 +476,12 @@ fun ProfileScreen(nav: NavController) {
                 }
             },
             onDismiss = { hevyData = null },
+        )
+    }
+    if (plateCalc) {
+        PlateCalculatorDialog(
+            initialKg = null, exerciseId = null, equipment = "barbell",
+            onDismiss = { plateCalc = false }, onManageGyms = { nav.navigate("gyms") },
         )
     }
     if (keyDialog) {

@@ -13,12 +13,13 @@ A free Android app to log your gym workouts and track your progress, inspired by
 - A **"Previous"** column shows what you did last time. If you tick a set without filling it in, the app uses those values.
 - Automatic **rest timer**, configurable per exercise (±15 s or skip). It vibrates and shows a notification when the rest is over.
 - **Personal record (PR) alerts** 🏆 the moment you beat a record: heaviest weight, estimated 1RM, best set volume, most reps or longest duration.
-- Notes per workout and per exercise, keep-screen-on during workouts, and editing of finished workouts.
+- Notes per workout and per exercise, keep-screen-on during workouts, and editing of finished workouts (including their duration). If you forget to finish a workout, the app offers to end it at the time of your last set.
 
 ### Routines & exercises
 - Routines with sets, reps, weight and rest time, started with one tap. You can also repeat a past workout or save it as a routine.
 - **122 built-in exercises** with search and muscle filters, plus your own custom exercises.
 - **Exercise photos** (start and end position, alternating) and a shortcut to technique videos on YouTube.
+- **Plate calculator** with per-gym plates and bars: which plates to load for a given weight, with or without a bar, on one or both sides.
 
 ### Progress
 - **Per-exercise charts**: estimated 1RM, heaviest weight, best set, volume and reps, over 1M / 3M / 6M / 1Y / All.
@@ -30,7 +31,7 @@ A free Android app to log your gym workouts and track your progress, inspired by
 
 ### Optional helpers
 Each one can be switched on or off in **Profile → Training helpers**.
-- 💡 **Progression suggestions**: proposes the next weight and reps based on your previous sessions (double progression, plus a ~10% deload when you stall).
+- 💡 **Progression suggestions**: proposes the next weight and reps based on your previous sessions — double progression with weight steps learned from your history or your gym's plates, a fresh start after long breaks, and a ~10% deload only when you've genuinely stalled.
 - 🤖 **AI coach (Google Gemini)**: chat with a coach that sees your training history and can analyse workouts. Uses your own free API key (see below). **Off by default.**
 
 ### Data

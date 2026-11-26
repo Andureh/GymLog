@@ -77,6 +77,8 @@ data class WorkoutSet(
     val durationSec: Int = 0,
     val type: SetType = SetType.NORMAL,
     val completed: Boolean = false,
+    /** Quando a série foi marcada como feita (null em séries antigas/importadas). */
+    val completedAt: Long? = null,
 )
 
 @Entity(tableName = "routines")

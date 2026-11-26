@@ -56,6 +56,7 @@ import com.gymlog.app.ui.screens.BodyWeightScreen
 import com.gymlog.app.ui.screens.CoachScreen
 import com.gymlog.app.ui.screens.ExerciseDetailScreen
 import com.gymlog.app.ui.screens.ExercisesScreen
+import com.gymlog.app.ui.screens.GymsScreen
 import com.gymlog.app.ui.screens.HistoryScreen
 import com.gymlog.app.ui.screens.HomeScreen
 import com.gymlog.app.ui.screens.ProfileScreen
@@ -129,6 +130,7 @@ fun AppRoot() {
                 RoutineEditScreen(nav, it.arguments!!.getLong("id"))
             }
             composable("bodyweight") { BodyWeightScreen(nav) }
+            composable("gyms") { GymsScreen(nav) }
             composable(
                 "routineProgress?key={key}",
                 listOf(navArgument("key") { type = NavType.StringType; defaultValue = "" }),

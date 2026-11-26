@@ -128,11 +128,17 @@ interface WorkoutDao {
     @Query("UPDATE sets SET type = :type WHERE id = :id")
     suspend fun setType(id: Long, type: SetType)
 
-    @Query("UPDATE sets SET completed = :done WHERE id = :id")
-    suspend fun setCompleted(id: Long, done: Boolean)
+    @Query("UPDATE sets SET completed = :done, completedAt = CASE WHEN :done THEN :at ELSE NULL END WHERE id = :id")
+    suspend fun setCompleted(id: Long, done: Boolean, at: Long)
 
-    @Query("UPDATE sets SET weight = :kg, reps = :reps, durationSec = :sec, completed = 1 WHERE id = :id")
-    suspend fun complete(id: Long, kg: Double, reps: Int, sec: Int)
+    @Query("UPDATE sets SET weight = :kg, reps = :reps, durationSec = :sec, completed = 1, completedAt = :at WHERE id = :id")
+    suspend fun complete(id: Long, kg: Double, reps: Int, sec: Int, at: Long)
+
+    @Query("UPDATE sets SET weight = :kg WHERE workoutExerciseId = :weId AND completed = 0 AND type != 'WARMUP'")
+    suspend fun setPendingWeight(weId: Long, kg: Double)
+
+    @Query("UPDATE workouts SET name = TRIM(name) WHERE id = :id")
+    suspend fun trimName(id: Long)
 
     @Query("UPDATE sets SET weight = :kg, reps = :reps, durationSec = :sec WHERE workoutExerciseId = :weId AND completed = 0 AND type != 'WARMUP'")
     suspend fun applyToPending(weId: Long, kg: Double, reps: Int, sec: Int)

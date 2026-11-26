@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7
+- **Plate calculator**: shows which plates to load (drawn on the bar, with per-side list) for any weight, counting the bar's weight or none for plate-loaded machines, loading on both sides or one side. When your plates can't make the exact weight, it shows the closest options below and above. Open it from an exercise's menu during a workout (it can apply the weight to the remaining sets) or from **Profile**.
+- **Gyms & plates**: set up each gym with its own plates (and how many pairs), bars and unit (kg/lb); the app remembers which bar each exercise uses. Included in backups.
+- **Better progression suggestions**, tested against a real training history:
+  - No more "deload 10%" while progressing: more reps at the same weight now counts as progress, reaching the top of the rep range is checked first, and lowering the weight yourself no longer triggers further deload suggestions.
+  - Long breaks (21+ days) suggest picking up where you left off instead of counting as a stall.
+  - Weight steps are learned from your history (e.g. machines that go up 2.25 kg) or from your gym's plates.
+  - Reps after a weight increase are estimated from your 1RM; the routine's target reps define the rep range.
+- **Workouts left open**: when finishing long after your last set, the app offers to end the workout at that time. The duration of finished workouts can now be edited (tap it in edit mode).
+- Workout titles are trimmed when finishing.
+- Database version 4 (stores when each set was completed; automatic migration).
+
 ## 1.6
 - Progress by routine now groups workouts by **routine**, not by title:
   - Workouts started from a routine are linked to it and stay in its charts even if you rename them, add or remove exercises mid-workout, or edit the routine later.

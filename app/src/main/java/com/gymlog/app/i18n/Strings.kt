@@ -312,6 +312,44 @@ abstract class Strings {
     abstract val exercisesWord: String
     abstract fun routineOf(name: String): String
 
+    // ---------- Calculadora de discos, ginásios, treinos esquecidos ----------
+    abstract val plateCalculator: String
+    abstract val plateCalcDesc: String
+    abstract val gymsAndPlates: String
+    abstract val gymsDesc: String
+    abstract val gymName: String
+    abstract val addGym: String
+    abstract val deleteGym: String
+    abstract val activeGym: String
+    abstract val useThisGym: String
+    abstract val plates: String
+    abstract val addPlate: String
+    abstract val plateWeight: String
+    abstract val bars: String
+    abstract val addBar: String
+    abstract val barName: String
+    abstract val barWeight: String
+    abstract val noBar: String
+    abstract val sidesBoth: String
+    abstract val sidesOne: String
+    abstract val targetWeight: String
+    abstract val perSide: String
+    abstract val onlyBar: String
+    abstract val lighterThanBar: String
+    abstract val notExact: String
+    abstract val myGym: String
+    abstract val barOlympic: String
+    abstract val barEz: String
+    abstract val barSmith: String
+    abstract val suggestResume: String
+    abstract val forgotTitle: String
+    abstract val finishNow: String
+    abstract val durationMinutes: String
+    abstract fun pairsN(n: Int): String
+    abstract fun useWeight(w: String): String
+    abstract fun forgotText(time: String, duration: String): String
+    abstract fun finishAt(time: String): String
+
     // ---------- Derivados ----------
     fun exerciseType(t: ExerciseType) = when (t) {
         ExerciseType.WEIGHT_REPS -> typeWeightReps

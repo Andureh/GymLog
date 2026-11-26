@@ -10,7 +10,7 @@ object Backup {
     private const val APP = "GymLog"
     private const val VERSION = 2
 
-    suspend fun export(db: AppDatabase): String {
+    suspend fun export(db: AppDatabase, gyms: GymStore? = null): String {
         val d = db.backupDao()
         val root = JSONObject()
         root.put("app", APP)
@@ -34,6 +34,7 @@ object Backup {
             JSONObject().put("id", it.id).put("workoutExerciseId", it.workoutExerciseId).put("position", it.position)
                 .put("weight", it.weight).put("reps", it.reps).put("durationSec", it.durationSec)
                 .put("type", it.type.name).put("completed", it.completed)
+                .put("completedAt", it.completedAt ?: JSONObject.NULL)
         })
         root.put("routines", arr(d.routines()) {
             JSONObject().put("id", it.id).put("name", it.name).put("notes", it.notes).put("createdAt", it.createdAt)
@@ -46,11 +47,12 @@ object Backup {
         root.put("bodyWeights", arr(d.bodyWeights()) {
             JSONObject().put("id", it.id).put("date", it.date).put("weightKg", it.weightKg)
         })
+        gyms?.let { root.put("gyms", GymStore.toJson(it.current)) }
         return root.toString()
     }
 
     /** Substitui todos os dados pelos da cópia. Lança exceção se o ficheiro for inválido. */
-    suspend fun import(db: AppDatabase, json: String) {
+    suspend fun import(db: AppDatabase, json: String, gyms: GymStore? = null) {
         val root = JSONObject(json)
         require(root.optString("app") == APP) { "Not a GymLog backup" }
 
@@ -91,6 +93,7 @@ object Backup {
                 id = it.getLong("id"), workoutExerciseId = it.getLong("workoutExerciseId"), position = it.getInt("position"),
                 weight = it.optDouble("weight", 0.0), reps = it.optInt("reps"), durationSec = it.optInt("durationSec"),
                 type = SetType.valueOf(it.optString("type", "NORMAL")), completed = it.optBoolean("completed"),
+                completedAt = if (!it.has("completedAt") || it.isNull("completedAt")) null else it.getLong("completedAt"),
             )
         }
         val routines = objs(root, "routines").map {
@@ -121,6 +124,7 @@ object Backup {
             d.insertSets(sets)
             d.insertBodyWeights(bws)
         }
+        root.optJSONObject("gyms")?.let { g -> runCatching { GymStore.fromJson(g) }.getOrNull()?.let { gyms?.replaceAll(it) } }
     }
 
     private fun <T> arr(items: List<T>, f: (T) -> JSONObject) = JSONArray().apply { items.forEach { put(f(it)) } }

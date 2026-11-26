@@ -98,6 +98,15 @@ import com.gymlog.app.domain.Session
 import com.gymlog.app.domain.SuggestKind
 import com.gymlog.app.domain.Suggestion
 import com.gymlog.app.domain.suggestNext
+import com.gymlog.app.domain.smallestJump
+import com.gymlog.app.data.NO_BAR
+import com.gymlog.app.util.KG_TO_LB
+import com.gymlog.app.util.fmtSkeleton
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.filled.Lightbulb
 import com.gymlog.app.i18n.I18n
 import com.gymlog.app.i18n.LocalStrings
@@ -127,6 +136,9 @@ import com.gymlog.app.util.unitLabel
 import com.gymlog.app.util.vibrateCelebrate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+/** Equipamento onde se carregam discos (a calculadora aparece no menu do exercício). */
+private val PLATE_EQUIPMENT = setOf("barbell", "ez_bar", "smith", "machine")
 
 private data class PrAlert(val exercise: Exercise, val prs: List<PrType>, val w: Double, val r: Int, val d: Int)
 
@@ -180,6 +192,11 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
     val sessionsMap by produceState(emptyMap<Long, List<Session>>(), exIds) {
         value = exIds.associateWith { repo.sessionsBefore(it, start) }
     }
+    // Objetivo de repetições de cada exercício na rotina deste treino (para as sugestões)
+    val routineTargets by produceState(emptyMap<Long, Int>(), wf.workout.routineId) {
+        value = wf.workout.routineId?.let { repo.routineOnce(it) }?.exercises?.associate { it.exercise.id to it.re.reps } ?: emptyMap()
+    }
+    val gymState by app.gyms.flow.collectAsStateWithLifecycle()
     val prMarks = remember(wf, bestsMap) {
         buildMap {
             wf.exercises.groupBy { it.exercise.id }.forEach { (exId, list) ->
@@ -200,6 +217,8 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
     var showPicker by remember { mutableStateOf(false) }
     var showFinish by remember { mutableStateOf(false) }
     var showDiscard by remember { mutableStateOf(false) }
+    var platesFor by remember { mutableStateOf<WorkoutExerciseFull?>(null) }
+    var editDuration by remember { mutableStateOf(false) }
 
     fun toggle(e: WorkoutExerciseFull, s: WorkoutSet, prev: WorkoutSet?) {
         focus.clearFocus()
@@ -279,6 +298,7 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
                     onNotes = { n -> scope.launch { repo.setWorkoutNotes(workoutId, n) } },
                     isActive = isActive,
                     startTime = start,
+                    onEditDuration = if (isActive) null else ({ editDuration = true }),
                 )
             }
             if (wf.exercises.isEmpty()) {
@@ -292,7 +312,18 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
             }
             items(wf.exercises, key = { it.we.id }) { e ->
                 val suggestion = if (isActive && settings.suggestions && e.sets.any { !it.completed && it.type != SetType.WARMUP }) {
-                    sessionsMap[e.exercise.id]?.let { suggestNext(e.exercise.type, e.exercise.equipment, it, lbs) }
+                    sessionsMap[e.exercise.id]?.let {
+                        // Em exercícios com barra, o menor salto possível vem dos discos do ginásio
+                        val plateInc = if (e.exercise.equipment in setOf("barbell", "ez_bar", "smith")) {
+                            val setup = app.gyms.setupFor(e.exercise.id, e.exercise.equipment)
+                            if (setup.barId == NO_BAR) null
+                            else smallestJump(gymState.active.plates, setup.sides)?.let { j -> if (gymState.active.lbs) j / KG_TO_LB else j }
+                        } else null
+                        suggestNext(
+                            e.exercise.type, e.exercise.equipment, it, lbs,
+                            targetReps = routineTargets[e.exercise.id], plateIncrement = plateInc,
+                        )
+                    }
                 } else null
                 ExerciseBlock(
                     e = e,
@@ -318,6 +349,9 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
                     onDuration = { id, d -> scope.launch { repo.setDuration(id, d) } },
                     onSetType = { id, t -> scope.launch { repo.setSetType(id, t) } },
                     onDeleteSet = { id -> scope.launch { repo.deleteSet(id) } },
+                    onPlates = if (e.exercise.equipment in PLATE_EQUIPMENT && e.exercise.type == ExerciseType.WEIGHT_REPS) {
+                        { platesFor = e }
+                    } else null,
                 )
             }
             item(key = "actions") {
@@ -358,7 +392,42 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
         )
     }
 
-    if (showFinish) {
+    // Treino que ficou aberto: a última série foi há mais de 45 min → propõe terminar a essa hora
+    val lastSetAt = wf.exercises.flatMap { it.sets }.mapNotNull { it.completedAt }.maxOrNull()
+    val forgotEnd = lastSetAt?.let { it + 2 * 60_000L }?.takeIf { isActive && System.currentTimeMillis() - lastSetAt > 45 * 60_000L }
+
+    fun finish(endTime: Long) {
+        showFinish = false
+        scope.launch {
+            if (isActive) app.restTimer.stop()
+            val ok = repo.finishWorkout(workoutId, setEnd = isActive, endTime = endTime)
+            if (ok) {
+                if (isActive) {
+                    nav.navigate("workoutDetail/$workoutId?new=true") {
+                        popUpTo("workout/{id}") { inclusive = true }
+                    }
+                } else {
+                    nav.popBackStack()
+                }
+            }
+        }
+    }
+
+    if (showFinish && forgotEnd != null && wf.completedSets() > 0) {
+        val time = fmtSkeleton("Hm", lastSetAt)
+        AlertDialog(
+            onDismissRequest = { showFinish = false },
+            title = { Text(str.forgotTitle) },
+            text = { Text(str.forgotText(time, fmtDuration(forgotEnd - start))) },
+            confirmButton = {
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = { finish(forgotEnd) }) { Text(str.finishAt(fmtSkeleton("Hm", forgotEnd))) }
+                    TextButton(onClick = { finish(System.currentTimeMillis()) }) { Text(str.finishNow) }
+                    TextButton(onClick = { showFinish = false }) { Text(str.keepGoing) }
+                }
+            },
+        )
+    } else if (showFinish) {
         val completed = wf.completedSets()
         val incomplete = wf.exercises.sumOf { e -> e.sets.count { !it.completed } }
         AlertDialog(
@@ -374,24 +443,44 @@ fun WorkoutScreen(nav: NavController, workoutId: Long) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showFinish = false
-                    scope.launch {
-                        if (isActive) app.restTimer.stop()
-                        val ok = repo.finishWorkout(workoutId, setEnd = isActive)
-                        if (ok) {
-                            if (isActive) {
-                                nav.navigate("workoutDetail/$workoutId?new=true") {
-                                    popUpTo("workout/{id}") { inclusive = true }
-                                }
-                            } else {
-                                nav.popBackStack()
-                            }
-                        }
-                    }
-                }) { Text(if (isActive) str.finish else str.save) }
+                TextButton(onClick = { finish(System.currentTimeMillis()) }) { Text(if (isActive) str.finish else str.save) }
             },
             dismissButton = { TextButton(onClick = { showFinish = false }) { Text(str.keepGoing) } },
+        )
+    }
+
+    platesFor?.let { e ->
+        val pending = e.sets.firstOrNull { !it.completed && it.type != SetType.WARMUP && it.weight > 0 }?.weight
+        val last = e.sets.lastOrNull { it.completed && it.weight > 0 }?.weight
+        PlateCalculatorDialog(
+            initialKg = pending ?: last ?: prevMap[e.exercise.id]?.maxOfOrNull { it.weight },
+            exerciseId = e.exercise.id,
+            equipment = e.exercise.equipment,
+            onDismiss = { platesFor = null },
+            onManageGyms = { nav.navigate("gyms") },
+            onApply = { kg -> focus.clearFocus(); scope.launch { repo.setPendingWeight(e.we.id, kg) } },
+        )
+    }
+
+    if (editDuration) {
+        var minutes by remember { mutableStateOf((wf.durationMs() / 60_000).toString()) }
+        AlertDialog(
+            onDismissRequest = { editDuration = false },
+            title = { Text(str.duration) },
+            text = {
+                OutlinedTextField(
+                    value = minutes, onValueChange = { minutes = it.filter(Char::isDigit).take(4) },
+                    label = { Text(str.durationMinutes) }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            },
+            confirmButton = {
+                TextButton(enabled = (minutes.toIntOrNull() ?: 0) > 0, onClick = {
+                    editDuration = false
+                    scope.launch { repo.setWorkoutDuration(workoutId, minutes.toInt()) }
+                }) { Text(str.save) }
+            },
+            dismissButton = { TextButton(onClick = { editDuration = false }) { Text(str.cancel) } },
         )
     }
 
@@ -438,6 +527,7 @@ private fun WorkoutHeader(
     onNotes: (String) -> Unit,
     isActive: Boolean,
     startTime: Long,
+    onEditDuration: (() -> Unit)? = null,
 ) {
     var nameText by remember { mutableStateOf(name) }
     var notesText by remember { mutableStateOf(notes) }
@@ -459,7 +549,10 @@ private fun WorkoutHeader(
                 val now = rememberNow()
                 StatItem(s.duration, fmtClock((now - startTime) / 1000), Modifier.weight(1f))
             } else {
-                StatItem(s.duration, duration ?: "-", Modifier.weight(1f))
+                StatItem(
+                    s.duration, (duration ?: "-") + if (onEditDuration != null) " ✎" else "",
+                    Modifier.weight(1f).then(if (onEditDuration != null) Modifier.clickable(onClick = onEditDuration) else Modifier),
+                )
             }
             StatItem(s.volume, volume, Modifier.weight(1f))
             StatItem(s.sets, sets.toString(), Modifier.weight(1f))
@@ -523,6 +616,7 @@ private fun ExerciseBlock(
     onDuration: (Long, Int) -> Unit,
     onSetType: (Long, SetType) -> Unit,
     onDeleteSet: (Long) -> Unit,
+    onPlates: (() -> Unit)? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     var restDialog by remember { mutableStateOf(false) }
@@ -559,6 +653,10 @@ private fun ExerciseBlock(
                     if (canMoveDown) DropdownMenuItem(
                         text = { Text(s.moveDown) }, leadingIcon = { Icon(Icons.Default.ArrowDownward, null) },
                         onClick = { menu = false; onMove(1) },
+                    )
+                    if (onPlates != null) DropdownMenuItem(
+                        text = { Text(s.plateCalculator) }, leadingIcon = { Icon(Icons.Default.Calculate, null) },
+                        onClick = { menu = false; onPlates() },
                     )
                     DropdownMenuItem(
                         text = { Text(s.restTime) }, leadingIcon = { Icon(Icons.Default.Timer, null) },
@@ -615,6 +713,7 @@ private fun ExerciseBlock(
                             SuggestKind.UP -> s.suggestUp
                             SuggestKind.REPS -> s.suggestMore
                             SuggestKind.DELOAD -> s.suggestDeload
+                            SuggestKind.RESUME -> s.suggestResume
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
